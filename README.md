@@ -1,2 +1,2 @@
 # cpp-http-server
-Минимальный HTTP сервер через сырые сокеты (С++)
+Lightweight HTTP server using raw POSIX sockets in C++ 
