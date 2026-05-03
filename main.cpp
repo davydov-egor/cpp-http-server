@@ -44,8 +44,13 @@ int main() {
         std::cerr << "listen() error: " << strerror(errno) << std::endl;
         return 1;
     }
-
-
+    //Прием подключения из очереди
+    int client_sock = accept(sock, NULL, NULL); //Прием без информации о клиенте
+    //Проверка ошибок приема
+    if(client_sock == -1){
+        std::cerr << "accept() error: " << strerror(errno) << std::endl;
+        return 1;
+    }
 
 
     //Закрытие сокета и проверка закрытия на ошибки
