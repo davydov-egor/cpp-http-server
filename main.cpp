@@ -37,7 +37,13 @@ int main() {
         std::cerr << "bind() error: " << strerror(errno) << std::endl;
         return 1;
     }
-
+    //Перевод сокета в режим ожидания
+    int listen_ret = listen(sock, 5);
+    //Проверка ошибок перевода
+    if(listen_ret == -1){
+        std::cerr << "listen() error: " << strerror(errno) << std::endl;
+        return 1;
+    }
 
 
 
