@@ -11,7 +11,7 @@ int main() {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     //Проверка сокета на ошибки
     if(sock == -1){
-        std::cerr << "Socket() error: " << strerror(errno) << std::endl;
+        std::cerr << "socket() error: " << strerror(errno) << std::endl;
         return 1;
     }
 
@@ -23,24 +23,29 @@ int main() {
     int pton_ret = inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
    //Проверка адреса на ошибки
     if(pton_ret == 0){
-        std::cerr << "Logic error: wrong IP\n";
+        std::cerr << "logic error: wrong IP\n";
         return 1;
     }
     if(pton_ret == -1){
         std::cerr << "inet_pton() error: " << strerror(errno) << std::endl;
         return 1;
     }
-
-
+    //Привязка к адресу
+    int bind_ret = bind(sock, (sockaddr*)&addr, sizeof(addr));
+    //Проверка привязки
+    if(bind_ret == -1){
+        std::cerr << "bind() error: " << strerror(errno) << std::endl;
+        return 1;
+    }
 
 
 
 
 
     //Закрытие сокета и проверка закрытия на ошибки
-    int cl = close(sock);
-    if(cl == -1){
-        std::cerr << "Close(sock) error: " << strerror(errno) << std::endl;
+    int close_ret = close(sock);
+    if(close_ret == -1){
+        std::cerr << "close(sock) error: " << strerror(errno) << std::endl;
         return 1;
     }
     return 0;
