@@ -6,6 +6,14 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+
+void close_client(int sock){ //Закрытие сокета клиента и проверка закрытия
+    int close_client_ret = close(sock); //Закрытие
+    if(close_client_ret == -1){ //Проверка закрытия 
+        std::cerr << "close(client_sock) error: " << strerror(errno) << std::endl;
+    }
+}
+
 int main() {
     //Coздание сокета
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -43,14 +51,36 @@ int main() {
     if(listen_ret == -1){
         std::cerr << "listen() error: " << strerror(errno) << std::endl;
         return 1;
-    }
-    //Прием подключения из очереди
-    int client_sock = accept(sock, NULL, NULL); //Прием без информации о клиенте
-    //Проверка ошибок приема
-    if(client_sock == -1){
-        std::cerr << "accept() error: " << strerror(errno) << std::endl;
-        return 1;
-    }
+   }
+    //Создание буфера
+    char buffer[1024];
+
+    do{
+        //Прием подключения из очереди
+        int client_sock = accept(sock, NULL, NULL); //Прием без информации о клиенте
+        //Проверка ошибок приема
+        if(client_sock == -1){
+            std::cerr << "accept() error: " << strerror(errno) << std::endl;
+            return 1;
+        }
+        //Чтение данных
+        int bytes = recv(client_sock, buffer, sizeof(buffer), 0);
+        //Проверка чтения данных
+        if(bytes == 0){
+            std::cerr << "Client disconnected\n";
+            close_client(client_sock);
+            continue;
+        }
+        if(bytes == -1){
+            std::cerr << "recv() error: " << strerror(errno) << std::endl;
+            close_client(client_sock);
+            continue;
+        }
+        
+        
+
+        close_client(client_sock); 
+    }while(true);
 
 
     //Закрытие сокета и проверка закрытия на ошибки
