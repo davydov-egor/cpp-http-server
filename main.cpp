@@ -76,8 +76,14 @@ int main() {
             close_client(client_sock);
             continue;
         }
-        
-        
+        //Отправка ответа
+        int write_ret = write(client_sock, buffer, bytes); //Эхо-режим
+        //Проверка отправки
+        if(write_ret == -1){
+            std::cerr << "write() error: " << strerror(errno) << std::endl;
+            close_client(client_sock);
+            continue;
+        }
 
         close_client(client_sock); 
     }while(true);
