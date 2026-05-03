@@ -4,20 +4,44 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-
+#include <arpa/inet.h>
 
 int main() {
-
+    //Coздание сокета
     int sock = socket(AF_INET, SOCK_STREAM, 0);
-
+    //Проверка сокета на ошибки
     if(sock == -1){
-        std::cerr << "Socket error: " << strerror(errno) << std::endl;
+        std::cerr << "Socket() error: " << strerror(errno) << std::endl;
         return 1;
     }
 
     std::cout << "Socket created: " << sock << std::endl;
+    //Создание адреса
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(8000);
+    int pton_ret = inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+   //Проверка адреса на ошибки
+    if(pton_ret == 0){
+        std::cerr << "Logic error: wrong IP\n";
+        return 1;
+    }
+    if(pton_ret == -1){
+        std::cerr << "inet_pton() error: " << strerror(errno) << std::endl;
+        return 1;
+    }
 
 
-    close(sock);
+
+
+
+
+
+    //Закрытие сокета и проверка закрытия на ошибки
+    int cl = close(sock);
+    if(cl == -1){
+        std::cerr << "Close(sock) error: " << strerror(errno) << std::endl;
+        return 1;
+    }
     return 0;
 }
