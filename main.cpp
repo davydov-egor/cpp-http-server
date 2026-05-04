@@ -27,7 +27,7 @@ int main() {
     //Создание адреса
     sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(8000);
+    addr.sin_port = htons(8080);
     int pton_ret = inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
    //Проверка адреса на ошибки
     if(pton_ret == 0){
@@ -52,39 +52,48 @@ int main() {
         std::cerr << "listen() error: " << strerror(errno) << std::endl;
         return 1;
    }
-    //Создание буфера
-    char buffer[1024];
-
+    //Создание буферов
+    char buffer[1024]; //Буфер запроса клиета
+    sockaddr_in cl_addr; //Буфер адреса клиента
+    socklen_t cl_addr_len = sizeof(cl_addr); //Длина адреса клиента
+    char cl_IP[INET_ADDRSTRLEN]; //Адрес клиента
+    char port_str[16];
+    char output_buf[128];
+    
     do{
         //Прием подключения из очереди
-        int client_sock = accept(sock, NULL, NULL); //Прием без информации о клиенте
+        int client_sock = accept(sock, (sockaddr*)&cl_addr, (socklen_t*)&cl_addr_len);
         //Проверка ошибок приема
         if(client_sock == -1){
             std::cerr << "accept() error: " << strerror(errno) << std::endl;
             return 1;
         }
-        //Чтение данных
+        //Формирование ответа
+        inet_ntop(AF_INET, &cl_addr.sin_addr, cl_IP, INET_ADDRSTRLEN);
+        snprintf(port_str, sizeof(port_str), "%d", ntohs(cl_addr.sin_port));
+        snprintf(output_buf, sizeof(output_buf), "%s:%s", cl_IP, port_str);
+
+        /*        //Чтение данных
         int bytes = recv(client_sock, buffer, sizeof(buffer), 0);
         //Проверка чтения данных
         if(bytes == 0){
             std::cerr << "Client disconnected\n";
             close_client(client_sock);
-            continue;
+            break;
         }
         if(bytes == -1){
             std::cerr << "recv() error: " << strerror(errno) << std::endl;
             close_client(client_sock);
-            continue;
-        }
+            break;
+        }*/
         //Отправка ответа
-        int write_ret = write(client_sock, buffer, bytes); //Эхо-режим
+        int write_ret = write(client_sock, output_buf, strlen(output_buf));
         //Проверка отправки
         if(write_ret == -1){
             std::cerr << "write() error: " << strerror(errno) << std::endl;
             close_client(client_sock);
-            continue;
+            break;
         }
-
         close_client(client_sock); 
     }while(true);
 
