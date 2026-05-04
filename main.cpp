@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-
 void close_client(int sock){ //Закрытие сокета клиента и проверка закрытия
     int close_client_ret = close(sock); //Закрытие
     if(close_client_ret == -1){ //Проверка закрытия 
@@ -17,6 +16,9 @@ void close_client(int sock){ //Закрытие сокета клиента и �
 int main() {
     //Coздание сокета
     int sock = socket(AF_INET, SOCK_STREAM, 0);
+    //Исправление Address already in use
+    int opt = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     //Проверка сокета на ошибки
     if(sock == -1){
         std::cerr << "socket() error: " << strerror(errno) << std::endl;
@@ -57,8 +59,6 @@ int main() {
     sockaddr_in cl_addr; //Буфер адреса клиента
     socklen_t cl_addr_len = sizeof(cl_addr); //Длина адреса клиента
     char cl_IP[INET_ADDRSTRLEN]; //Адрес клиента
-    char port_str[16];
-    char output_buf[128];
     
     do{
         //Прием подключения из очереди
@@ -68,32 +68,33 @@ int main() {
             std::cerr << "accept() error: " << strerror(errno) << std::endl;
             return 1;
         }
-        //Формирование ответа
-        inet_ntop(AF_INET, &cl_addr.sin_addr, cl_IP, INET_ADDRSTRLEN);
-        snprintf(port_str, sizeof(port_str), "%d", ntohs(cl_addr.sin_port));
-        snprintf(output_buf, sizeof(output_buf), "%s:%s", cl_IP, port_str);
-
-        /*        //Чтение данных
-        int bytes = recv(client_sock, buffer, sizeof(buffer), 0);
-        //Проверка чтения данных
-        if(bytes == 0){
-            std::cerr << "Client disconnected\n";
-            close_client(client_sock);
-            break;
-        }
-        if(bytes == -1){
-            std::cerr << "recv() error: " << strerror(errno) << std::endl;
-            close_client(client_sock);
-            break;
-        }*/
-        //Отправка ответа
-        int write_ret = write(client_sock, output_buf, strlen(output_buf));
-        //Проверка отправки
-        if(write_ret == -1){
-            std::cerr << "write() error: " << strerror(errno) << std::endl;
-            close_client(client_sock);
-            break;
-        }
+        do{
+            //Чтение данных
+            int bytes = recv(client_sock, buffer, sizeof(buffer), 0);
+            //Проверка чтения данных
+            if(bytes == 0){
+                std::cerr << "Client disconnected\n";
+                break;
+            }
+            if(bytes == -1){
+                std::cerr << "recv() error: " << strerror(errno) << std::endl;
+                break;
+            }
+            //Формирование ответа
+            buffer[bytes] = '\0';
+            const char* resp =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: 14\r\n"
+            "\r\n"
+            "Hello World!\r\n";
+            //Отправка ответа
+            int write_ret = write(client_sock, resp, strlen(resp));
+            //Проверка отправки
+            if(write_ret == -1){
+                std::cerr << "write() error: " << strerror(errno) << std::endl;
+                break;
+            }
+        }while(true);
         close_client(client_sock); 
     }while(true);
 
