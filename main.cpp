@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <string>
 
 void close_client(int sock){ //Закрытие сокета клиента и проверка закрытия
     int close_client_ret = close(sock); //Закрытие
@@ -82,13 +83,17 @@ int main() {
             }
             //Формирование ответа
             buffer[bytes] = '\0';
-            const char* resp =
+            std::string body(buffer, bytes);
+            std::string resp =
             "HTTP/1.1 200 OK\r\n"
-            "Content-Length: 14\r\n"
-            "\r\n"
-            "Hello World!\r\n";
+            "Content-Length: " + std::to_string(body.size()) + "\r\n"
+            "\r\n" +
+            body;
+
+
+
             //Отправка ответа
-            int write_ret = write(client_sock, resp, strlen(resp));
+            int write_ret = write(client_sock, resp.c_str(), resp.size());
             //Проверка отправки
             if(write_ret == -1){
                 std::cerr << "write() error: " << strerror(errno) << std::endl;
