@@ -103,9 +103,16 @@ int main() {
       size_t space2 = buffer.find(" ", space1 + 1);
       req.method = buffer.substr(0, space1);
       req.target = buffer.substr(space1 + 1, space2 - space1 - 1);
-      req.version = buffer.substr(space2 + 1, buffer.find("\r\n") - space2 - 1); 
-
-
+      req.version = buffer.substr(space2 + 1, buffer.find("\r\n") - space2 - 1);
+      size_t h_start = buffer.find("\r\n") + 2;
+      while(buffer.substr(h_start, 2) != "\r\n"){
+        size_t colon = buffer.find(":", h_start);
+        size_t end = buffer.find("\r\n", h_start);
+        if(end == std::string::npos || h_start >= buffer.size()) break;
+        req.headers[buffer.substr(h_start, colon - h_start)] = buffer.substr(colon + 2, end - colon - 2);
+        h_start = end + 2;
+      }
+      req.body = buffer.substr(h_start + 2);
       //Формирование ответа
       body = buffer;
       std::string resp =
