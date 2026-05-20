@@ -18,6 +18,15 @@ struct HTTP_request {
   std::string body;
 };
 
+std::string E404(){
+  std::string resp =
+  "HTTP/1.1 404 Not Found\r\n"
+  "Content-Length: 9\r\n"
+  "\r\n"
+  "Not Found"; 
+  return resp;
+}
+
 void close_client(int sock){ //Закрытие сокета клиента и проверка закрытия
   int close_client_ret = close(sock); //Закрытие
   if(close_client_ret == -1){ //Проверка закрытия 
@@ -73,7 +82,9 @@ int main() {
   socklen_t cl_addr_len = sizeof(cl_addr); //Длина адреса клиента
   char cl_IP[INET_ADDRSTRLEN]; //Адрес клиента
   HTTP_request req;
-  std::string body;
+  std::string body; //Буфер тела ответа
+  std::string type; //Буфер типа ответа
+  std::string resp; //Буфер ответа
   do{
     //Прием подключения из очереди
     int client_sock = accept(sock, (sockaddr*)&cl_addr, (socklen_t*)&cl_addr_len);
@@ -114,13 +125,41 @@ int main() {
       }
       req.body = buffer.substr(h_start + 2);
       //Формирование ответа
-      body = buffer;
-      std::string resp =
-      "HTTP/1.1 200 OK\r\n"
-      "Content-Length: " + std::to_string(body.size()) + "\r\n"
-      "\r\n" +
-      body;
-
+      if(req.method == "GET"){
+        type = "text/plain";
+        if(req.target == "/"){
+          body = buffer;
+          resp =
+          "HTTP/1.1 200 OK\r\n"
+          "Content-Length: " + std::to_string(body.size()) + "\r\n"
+          "Content-Type: " + type + "\r\n"
+          "\r\n" +
+          body;
+        }
+        else if(req.target == "/IP"){
+          const char* ntop_ret = inet_ntop(AF_INET, &cl_addr.sin_addr, cl_IP, INET_ADDRSTRLEN);
+          if(ntop_ret == nullptr){
+            std::cerr << "inet_ntop() error" << std::endl;
+            strcpy(cl_IP, "unknown");
+          }
+          body.assign(cl_IP);
+          body = body + ":" + std::to_string(ntohs(cl_addr.sin_port));
+          resp =
+          "HTTP/1.1 200 OK\r\n"
+          "Content-Length: " + std::to_string(body.size()) + "\r\n"
+          "Content-Type: " + type + "\r\n"
+          "\r\n" +
+          body; 
+        }
+        else resp = E404();
+      }
+      else{
+        resp =
+        "HTTP/1.1 405 Method Not Allowed\r\n"
+        "Content-Length: 18\r\n"
+        "\r\n"
+        "Method Not Allowed";
+      }
       //Отправка ответа
       int write_ret = write(client_sock, resp.c_str(), resp.size());
       //Проверка отправки
