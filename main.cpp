@@ -18,9 +18,22 @@ struct HTTP_request {
   std::string body;
 };
 
+std::string E400(){
+  std::string resp =
+  "HTTP/1.1 400 Bad Request\r\n"
+  "Content-Type: text/plain\r\n"
+  "Content-Length: 11\r\n"
+  "\r\n"
+  "Bad Request"; 
+  return resp;
+}
+
+
+
 std::string E404(){
   std::string resp =
   "HTTP/1.1 404 Not Found\r\n"
+  "Content-Type: text/plain\r\n"
   "Content-Length: 9\r\n"
   "\r\n"
   "Not Found"; 
@@ -105,63 +118,88 @@ int main() {
         std::cerr << "recv() error: " << strerror(errno) << std::endl;
         break;
       }
-      //Передаем значение из raw_buffer в buffer
+      //Передача значения
       buffer.assign(raw_buffer, bytes);
+      //Очистка буфера ответа
+      resp.clear();
       //Вывод запроса клиента
       std::cout << "Client request:\n" << buffer << std::endl;
       //Парсинг запроса
-      size_t space1 = buffer.find(" ");
+      size_t space1 = buffer.find(" "); //Поиск пробеллов
       size_t space2 = buffer.find(" ", space1 + 1);
-      req.method = buffer.substr(0, space1);
-      req.target = buffer.substr(space1 + 1, space2 - space1 - 1);
-      req.version = buffer.substr(space2 + 1, buffer.find("\r\n") - space2 - 1);
-      size_t h_start = buffer.find("\r\n") + 2;
-      while(buffer.substr(h_start, 2) != "\r\n"){
-        size_t colon = buffer.find(":", h_start);
-        size_t end = buffer.find("\r\n", h_start);
-        if(end == std::string::npos || h_start >= buffer.size()) break;
-        req.headers[buffer.substr(h_start, colon - h_start)] = buffer.substr(colon + 2, end - colon - 2);
-        h_start = end + 2;
-      }
-      req.body = buffer.substr(h_start + 2);
-      //Формирование ответа
-      if(req.method == "GET"){
-        type = "text/plain";
-        if(req.target == "/"){
-          body = buffer;
-          resp =
-          "HTTP/1.1 200 OK\r\n"
-          "Content-Length: " + std::to_string(body.size()) + "\r\n"
-          "Content-Type: " + type + "\r\n"
-          "\r\n" +
-          body;
-        }
-        else if(req.target == "/IP"){
-          const char* ntop_ret = inet_ntop(AF_INET, &cl_addr.sin_addr, cl_IP, INET_ADDRSTRLEN);
-          if(ntop_ret == nullptr){
-            std::cerr << "inet_ntop() error" << std::endl;
-            strcpy(cl_IP, "unknown");
-          }
-          body.assign(cl_IP);
-          body = body + ":" + std::to_string(ntohs(cl_addr.sin_port));
-          resp =
-          "HTTP/1.1 200 OK\r\n"
-          "Content-Length: " + std::to_string(body.size()) + "\r\n"
-          "Content-Type: " + type + "\r\n"
-          "\r\n" +
-          body; 
-        }
-        else resp = E404();
-      }
+      size_t h_start = 0;
+      size_t colon = 0;
+      size_t end = 0;
+      if(space1 == std::string::npos || space2 == std::string::npos || buffer.find("\r\n") == std::string::npos) resp = E400(); //Проверка целостности запроса
       else{
-        resp =
-        "HTTP/1.1 405 Method Not Allowed\r\n"
-        "Content-Length: 18\r\n"
-        "\r\n"
-        "Method Not Allowed";
+        h_start = buffer.find("\r\n") + 2;
+        colon = buffer.find(":", h_start); 
+        end = buffer.find("\r\n", h_start);
+        if(h_start + 2 > buffer.size()){
+          resp = E400();
+        }
+        else{
+          while(buffer.substr(h_start, 2) != "\r\n"){ //Заголовки
+            colon = buffer.find(":", h_start);
+            end = buffer.find("\r\n", h_start);
+            if(colon == std::string::npos || end == std::string::npos){
+              resp = E400();
+              break;
+            }
+            req.headers[buffer.substr(h_start, colon - h_start)] = buffer.substr(colon + 2, end - colon - 2);
+            h_start = end + 2;
+            if(h_start + 2 > buffer.size()){
+              resp = E400();
+              break;
+            }
+          }
+        }
+      }
+      if(resp != E400()){
+        req.method = buffer.substr(0, space1); //Метод
+        req.target = buffer.substr(space1 + 1, space2 - space1 - 1); //Цель
+        req.version = buffer.substr(space2 + 1, buffer.find("\r\n") - space2 - 1); //Версия
+        req.body = buffer.substr(h_start + 2); //Тело
+        //Формирование ответа 
+        if(req.method == "GET"){
+          type = "text/plain";
+          if(req.target == "/"){
+            body = buffer;
+            resp =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: " + std::to_string(body.size()) + "\r\n"
+            "Content-Type: " + type + "\r\n"
+            "\r\n" +
+            body;
+          }
+          else if(req.target == "/IP"){
+            const char* ntop_ret = inet_ntop(AF_INET, &cl_addr.sin_addr, cl_IP, INET_ADDRSTRLEN);
+            if(ntop_ret == nullptr){
+              std::cerr << "inet_ntop() error" << std::endl;
+              strcpy(cl_IP, "unknown");
+            }
+            body.assign(cl_IP);
+            body = body + ":" + std::to_string(ntohs(cl_addr.sin_port));
+            resp =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: " + std::to_string(body.size()) + "\r\n"
+            "Content-Type: " + type + "\r\n"
+            "\r\n" +
+            body; 
+          }
+          else resp = E404();
+        }
+        else{
+          resp =
+          "HTTP/1.1 405 Method Not Allowed\r\n"
+          "Content-Type: text/plain\r\n"
+          "Content-Length: 18\r\n"
+          "\r\n"
+          "Method Not Allowed";
+        }
       }
       //Отправка ответа
-      int write_ret = write(client_sock, resp.c_str(), resp.size());
+      int write_ret = write(client_sock, resp.c_str(), resp.size()); 
       //Проверка отправки
       if(write_ret == -1){
         std::cerr << "write() error: " << strerror(errno) << std::endl;
