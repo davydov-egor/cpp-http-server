@@ -193,6 +193,20 @@ int main() {
           }
           else resp = E404();
         }
+        else if(req.method == "POST"){
+          type = "text/plain";
+          if(req.target == "/send"){
+            body = "sent " + std::to_string(req.body.size()) + " bytes";
+            resp =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: " + std::to_string(body.size()) + "\r\n"
+            "Content-Type: " + type + "\r\n"
+            "Connection: keep-alive\r\n"
+            "\r\n" +
+            body;
+          }
+          else resp = E404();
+        }
         else{
           resp =
           "HTTP/1.1 405 Method Not Allowed\r\n"
