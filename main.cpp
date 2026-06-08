@@ -28,8 +28,6 @@ std::string E400(){
   return resp;
 }
 
-
-
 std::string E404(){
   std::string resp =
   "HTTP/1.1 404 Not Found\r\n"
@@ -107,6 +105,12 @@ int main() {
       return 1;
     }
     do{
+      //Очистка буферов
+      resp.clear();
+      buffer.clear();
+      body.clear();
+      type.clear();
+      req = HTTP_request{};
       //Чтение данных
       int bytes = recv(client_sock, raw_buffer, sizeof(raw_buffer), 0);
       //Проверка чтения данных
@@ -120,8 +124,6 @@ int main() {
       }
       //Передача значения
       buffer.assign(raw_buffer, bytes);
-      //Очистка буфера ответа
-      resp.clear();
       //Вывод запроса клиента
       std::cout << "Client request:\n" << buffer << std::endl;
       //Парсинг запроса
@@ -169,6 +171,7 @@ int main() {
             "HTTP/1.1 200 OK\r\n"
             "Content-Length: " + std::to_string(body.size()) + "\r\n"
             "Content-Type: " + type + "\r\n"
+            "Connection: keep-alive\r\n"
             "\r\n" +
             body;
           }
@@ -184,6 +187,7 @@ int main() {
             "HTTP/1.1 200 OK\r\n"
             "Content-Length: " + std::to_string(body.size()) + "\r\n"
             "Content-Type: " + type + "\r\n"
+            "Connection: keep-alive\r\n"
             "\r\n" +
             body; 
           }
